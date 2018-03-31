@@ -45,8 +45,9 @@ namespace SaxQuantizer {
 		cout << "cdf: ";
 		for (size_t i = 1; i < alphabet_size; ++i) {
 			double cdf = ((double)i) / alphabet_size;
-			cout << cdf << " ";
+			cout << quantile(dist, cdf) << " ";
 			cutpoints->push_back(quantile(dist, cdf));
+			//cout << cutpoints->begin();
 		}
 		cout << endl;
 	}
@@ -54,7 +55,7 @@ namespace SaxQuantizer {
 	/**
 	 * Symbolic Aggregate Approximation with fractional sliding window, numerosity reduction, and scaling
 	 */
-	class Sax {
+	class SAX {
 	private:
 		size_t m_window_size;
 		size_t m_string_size;
@@ -62,7 +63,6 @@ namespace SaxQuantizer {
 
 		double m_baseline_mean;
 		double m_baseline_stdev;
-		double m_time_series_length = NULL;
 		vector<double> m_cutpoints;
 
 		bool m_trained;
@@ -145,7 +145,7 @@ namespace SaxQuantizer {
 		* @param <string_size>: output string size for each sliding window (can be greater than window_size)
 		* @param <alphabet_size>: number of codewords
 		*/
-		Sax(size_t window_size, size_t string_size, size_t alphabet_size)
+		SAX(size_t window_size, size_t string_size, size_t alphabet_size)
 			: m_window_size(window_size), m_string_size(string_size), m_alphabet_size(alphabet_size),
 			m_baseline_mean(0), m_baseline_stdev(1), m_trained(false) {
 
@@ -165,17 +165,14 @@ namespace SaxQuantizer {
 		// @date : 2018/3/29 18:31
 		// @author :   Ruidong Xue
 		*/
-		Sax(const double& m_time_series_length,const size_t& alphabet_size)
-			: m_time_series_length(m_time_series_length), m_alphabet_size(alphabet_size),
-			m_baseline_mean(0), m_baseline_stdev(1), m_trained(false) {
+		SAX(const size_t& alphabet_size): m_alphabet_size(alphabet_size),m_baseline_mean(0), m_baseline_stdev(1), m_trained(false) {
 
-			assert(m_time_series_length > 0);
 			assert(alphabet_size > 0);
 
 			fill_cutpoints(alphabet_size, &m_cutpoints);
 		}
 
-		virtual ~Sax() {
+		virtual ~SAX() {
 			m_cutpoints.clear();
 		}
 
@@ -265,17 +262,19 @@ namespace SaxQuantizer {
 
 
 		template<typename Container>
-		size_t getSAX(const Container& seq, vector<double>& qseq) {
+		size_t getSAX(const Container& seq, vector<char>& qseq) {
 			if (!m_trained) train(seq);
-
+			double normalized = NULL;
 			for (auto& it : seq) {
-				cout << it << endl;
-				double normalized = (*it - m_baseline_mean) / m_baseline_stdev;
+				//cout << it << endl;
+				normalized = (it - m_baseline_mean) / m_baseline_stdev;
 				int cnt = -1;
+				cout << "*******************************************" << endl;
 				for (const auto & cp : m_cutpoints) {
-					if (it >= cp) ++cnt;
+					cout << normalized << ", " << cp << ", " << (normalized > cp ? true:false) << endl;
+					if (normalized >= cp) ++cnt;
 				}
-				qseq.push_back(cnt);
+				qseq.push_back(static_cast<char>(cnt + 65));
 			}
 
 			return 0;
